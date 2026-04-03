@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://tiles.stadiamaps.com"
+    >
+    <link href="./node_modules/leaflet/dist/leaflet.css" rel="stylesheet">
+    <link href="./styles.css" rel="stylesheet">
+    <title>AIS Simulator</title>
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="map-panel">
+        <div class="udp-panel">
+          <div class="udp-mode-switch" role="group" aria-label="UDP mode">
+            <button id="udp-mode-client" class="udp-mode-button is-selected" type="button" data-mode="client">
+              Client
+            </button>
+            <button id="udp-mode-server" class="udp-mode-button" type="button" data-mode="server">
+              Server
+            </button>
+          </div>
+          <div class="udp-pill">
+            <label class="udp-field">
+              <span class="sr-only">UDP host or bind address</span>
+              <input id="udp-ip" type="text" inputmode="text" placeholder="IP" value="localhost">
+            </label>
+            <span class="udp-separator" aria-hidden="true"></span>
+            <label class="udp-field udp-field-port">
+              <span class="sr-only">UDP destination port</span>
+              <input id="udp-port" type="text" inputmode="numeric" placeholder="PORT" value="9200">
+            </label>
+            <button id="udp-toggle" class="udp-toggle" type="button" aria-label="Toggle UDP connection">
+              <img src="./assets/icons/link.png" alt="">
+            </button>
+          </div>
+        </div>
+        <div id="map" aria-label="AIS map"></div>
+        <div id="map-context-menu" class="map-context-menu" role="menu" aria-hidden="true"></div>
+      </section>
+    </main>
+    <div id="vessel-modal" class="modal-backdrop" aria-hidden="true">
+      <div class="vessel-modal" role="dialog" aria-modal="true" aria-labelledby="vessel-modal-title">
+        <div class="vessel-modal-header">
+          <div>
+            <p class="vessel-modal-eyebrow">Edit Vessel</p>
+            <h2 id="vessel-modal-title">Vessel Details</h2>
+          </div>
+        </div>
+        <form id="vessel-form" class="vessel-form">
+          <input id="vessel-id" type="hidden">
+          <label class="vessel-form-field vessel-form-field-wide">
+            <span>Name</span>
+            <input id="vessel-name" type="text" maxlength="32" required>
+          </label>
+          <label class="vessel-form-field">
+            <span>MMSI</span>
+            <input id="vessel-mmsi" type="text" inputmode="numeric" maxlength="9" required>
+          </label>
+          <label class="vessel-form-field">
+            <span>Destination</span>
+            <input id="vessel-destination" type="text" maxlength="20">
+          </label>
+          <label class="vessel-form-field">
+            <span>Latitude</span>
+            <input id="vessel-latitude" type="number" step="0.000001" min="-90" max="90" required>
+          </label>
+          <label class="vessel-form-field">
+            <span>Longitude</span>
+            <input id="vessel-longitude" type="number" step="0.000001" min="-180" max="180" required>
+          </label>
+          <label class="vessel-form-field">
+            <span>Speed (kn)</span>
+            <input id="vessel-sog" type="number" step="0.1" min="0" required>
+          </label>
+          <label class="vessel-form-field">
+            <span>Tx Rate (Hz)</span>
+            <input id="vessel-message-rate" type="number" step="0.1" min="0.1" value="1" required>
+          </label>
+          <label class="vessel-form-field">
+            <span>COG</span>
+            <input id="vessel-cog" type="number" step="0.1" min="0" max="359.9" required>
+          </label>
+          <label class="vessel-form-field">
+            <span>Heading</span>
+            <input id="vessel-heading" type="number" step="0.1" min="0" max="359.9" required>
+          </label>
+          <div class="vessel-form-actions vessel-form-field-wide">
+            <button id="vessel-cancel" class="vessel-modal-button is-secondary" type="button">Cancel</button>
+            <button class="vessel-modal-button is-primary" type="submit">Apply</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <script src="./node_modules/leaflet/dist/leaflet.js"></script>
+    <script src="./libs/SmoothWheelZoom.js"></script>
+    <script src="./libs/ais.js"></script>
+    <script src="./libs/vessel.js"></script>
+    <script src="./renderer.js"></script>
+  </body>
+</html>

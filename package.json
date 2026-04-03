@@ -1,0 +1,25 @@
+{
+  "name": "AIS-SIM",
+  "version": "1.0.0",
+  "description": "AIS Simulator",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "repository": "https://github.com/electron/minimal-repro",
+  "keywords": [
+    "Electron",
+    "quick",
+    "start",
+    "tutorial",
+    "demo"
+  ],
+  "author": "GitHub",
+  "license": "CC0-1.0",
+  "devDependencies": {
+    "electron": "^41.0.4"
+  },
+  "dependencies": {
+    "leaflet": "^1.9.4"
+  }
+}

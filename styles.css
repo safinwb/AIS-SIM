@@ -1,0 +1,469 @@
+:root {
+  color-scheme: dark light;
+  font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+  background: #000000;
+  color: #ffffff;
+  --overlay-panel-width: min(320px, calc(100vw - 32px));
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  min-height: 100vh;
+}
+
+.app-shell {
+  min-height: 100vh;
+  background: #000000;
+}
+
+.udp-panel {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  z-index: 1100;
+  width: var(--overlay-panel-width);
+  padding: 10px;
+  border: 1px solid rgba(158, 201, 231, 0.14);
+  border-radius: 18px;
+  background: #000000;
+}
+
+.udp-mode-switch {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  margin: 0 0 8px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: #000000;
+}
+
+.udp-mode-button {
+  min-width: 0;
+  min-height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.udp-mode-button:hover {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.udp-mode-button.is-selected {
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+
+.udp-mode-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.udp-pill {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) auto minmax(54px, 68px) auto;
+  align-items: center;
+  gap: 0;
+  min-height: 44px;
+  padding: 4px 4px 4px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: #1a1a1a;
+}
+
+.udp-field {
+  min-width: 0;
+}
+
+.udp-field input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: #1a1a1a;
+  border-radius: 10px;
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 8px 10px;
+}
+
+.udp-field input::placeholder {
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.udp-field input:disabled {
+  color: rgba(255, 255, 255, 0.62);
+  cursor: not-allowed;
+}
+
+.udp-field input[aria-invalid='true'] {
+  color: #ffb6b6;
+}
+
+.udp-field-port input {
+  text-transform: uppercase;
+}
+
+.udp-separator {
+  width: 1px;
+  height: 18px;
+  margin: 0 8px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.udp-toggle {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  margin-left: 6px;
+  border: 0;
+  border-radius: 999px;
+  background: #000000;
+  cursor: pointer;
+  transition: background-color 160ms ease, transform 160ms ease;
+}
+
+.udp-toggle:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.udp-toggle:active {
+  transform: scale(0.97);
+}
+
+.udp-toggle:disabled {
+  cursor: progress;
+}
+
+.udp-toggle img {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
+}
+
+.udp-toggle.is-active {
+  background: #009945;
+}
+
+.udp-toggle.is-active:hover {
+  background: #138345;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.map-panel {
+  position: relative;
+  height: 100vh;
+  min-height: 100vh;
+}
+
+#map {
+  width: 100%;
+  height: 100%;
+  min-height: 100vh;
+}
+
+.leaflet-container {
+  font: inherit;
+}
+
+.vessel-marker-icon {
+  background: transparent;
+  border: 0;
+}
+
+.vessel-marker-shell {
+  --vessel-heading: 0deg;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: #111111;
+  transform: rotate(var(--vessel-heading));
+}
+
+.vessel-marker-shell img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
+.map-context-menu {
+  position: absolute;
+  z-index: 1200;
+  display: none;
+  min-width: 180px;
+  padding: 6px;
+  border: 1px solid rgba(151, 204, 238, 0.16);
+  border-radius: 14px;
+  background: #000000;
+}
+
+.map-context-menu.is-visible {
+  display: grid;
+}
+
+.map-context-menu-item {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: rgba(237, 245, 251, 0.92);
+  font-size: 0.84rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.map-context-menu-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.map-context-menu-item.is-danger {
+  color: #ffb7b7;
+}
+
+.map-context-menu-item.is-danger:hover {
+  background: rgba(209, 68, 68, 0.16);
+}
+
+.leaflet-popup-content-wrapper {
+  border: 1px solid rgba(151, 204, 238, 0.14);
+  border-radius: 14px;
+  background: #000000;
+  color: rgba(237, 245, 251, 0.92);
+}
+
+.leaflet-popup-content {
+  margin: 12px 14px;
+  color: inherit;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.leaflet-popup-content strong {
+  color: #ffffff;
+}
+
+.leaflet-popup-tip {
+  background: #000000;
+}
+
+.leaflet-container a.leaflet-popup-close-button {
+  color: rgba(223, 236, 247, 0.68);
+  transition: color 140ms ease;
+}
+
+.leaflet-container a.leaflet-popup-close-button:hover {
+  color: #ffffff;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+  display: none;
+  align-items: center;
+  justify-items: start;
+  padding: 24px 16px;
+  background: transparent;
+  pointer-events: none;
+}
+
+.modal-backdrop.is-visible {
+  display: grid;
+}
+
+.vessel-modal {
+  width: var(--overlay-panel-width);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  padding: 22px 22px 18px;
+  border: 1px solid rgba(155, 203, 235, 0.14);
+  border-radius: 22px;
+  background: #000000;
+  pointer-events: auto;
+}
+
+.vessel-modal-header {
+  margin-bottom: 16px;
+}
+
+.vessel-modal-eyebrow {
+  margin: 0 0 8px;
+  color: #00a2ff;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.vessel-modal-header h2 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 1.35rem;
+  line-height: 1.1;
+}
+
+.vessel-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.vessel-form-field {
+  display: grid;
+  gap: 7px;
+}
+
+.vessel-form-field span {
+  color: rgba(229, 239, 247, 0.74);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.vessel-form-field input {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid rgba(151, 204, 238, 0.16);
+  border-radius: 12px;
+  outline: 0;
+  background: #1a1a1a;
+  color: #ffffff;
+  font-size: 0.92rem;
+}
+
+.vessel-form-field input:focus {
+  border-color: rgba(123, 197, 243, 0.58);
+}
+
+.vessel-form-field-wide {
+  grid-column: 1 / -1;
+}
+
+.vessel-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.vessel-modal-button {
+  min-width: 96px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 140ms ease, background-color 140ms ease, color 140ms ease;
+}
+
+.vessel-modal-button:hover {
+  transform: translateY(-1px);
+}
+
+.vessel-modal-button.is-secondary {
+  background: #7a1f1f;
+  color: #ffffff;
+}
+
+.vessel-modal-button.is-primary {
+  background: #0f7a3f;
+  color: #ffffff;
+}
+
+.leaflet-control-attribution {
+  margin: 0 10px 10px 0 !important;
+  padding: 4px 8px !important;
+  border: 1px solid rgba(214, 231, 243, 0.14);
+  border-radius: 999px;
+  background: #000000 !important;
+  color: rgba(255, 255, 255, 0.92) !important;
+  font-size: 10px !important;
+  line-height: 1.2 !important;
+}
+
+.leaflet-control-attribution a {
+  color: rgba(182, 190, 198, 0.92) !important;
+  text-decoration: none;
+}
+
+.leaflet-control-attribution a:hover {
+  color: rgba(226, 231, 236, 0.98) !important;
+}
+
+@media (max-width: 900px) {
+  .udp-panel {
+    bottom: 12px;
+    left: 12px;
+    width: min(320px, calc(100vw - 24px));
+    padding: 8px;
+  }
+
+  .udp-pill {
+    grid-template-columns: minmax(0, 1.45fr) auto minmax(50px, 62px) auto;
+  }
+
+  .vessel-form {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-backdrop {
+    padding: 16px 12px;
+  }
+
+  #map {
+    min-height: 100vh;
+  }
+}
+
+@media (max-height: 820px) {
+  .modal-backdrop {
+    justify-items: end;
+    padding: 16px;
+  }
+
+  .vessel-modal {
+    max-height: calc(100vh - 32px);
+  }
+}
