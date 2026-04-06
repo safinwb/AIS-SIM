@@ -409,6 +409,29 @@ function normalizeAngle(value) {
   return Number(normalized.toFixed(1))
 }
 
+function mirrorAngleInputValue(sourceInput, targetInput) {
+  targetInput.value = sourceInput.value
+}
+
+function syncPairedAngleInputs(sourceInput, targetInput) {
+  sourceInput.addEventListener('input', () => {
+    mirrorAngleInputValue(sourceInput, targetInput)
+  })
+
+  sourceInput.addEventListener('change', () => {
+    const normalized = normalizeAngle(sourceInput.value)
+
+    if (normalized === null) {
+      mirrorAngleInputValue(sourceInput, targetInput)
+      return
+    }
+
+    const normalizedValue = normalized.toFixed(1)
+    sourceInput.value = normalizedValue
+    targetInput.value = normalizedValue
+  })
+}
+
 function parseVesselFormValues() {
   const name = vesselNameInput.value.trim()
   const mmsi = vesselMmsiInput.value.trim()
@@ -631,6 +654,9 @@ document.addEventListener('click', (event) => {
 vesselCancelButton.addEventListener('click', () => {
   closeVesselModal()
 })
+
+syncPairedAngleInputs(vesselCogInput, vesselHeadingInput)
+syncPairedAngleInputs(vesselHeadingInput, vesselCogInput)
 
 vesselFormElement.addEventListener('submit', (event) => {
   event.preventDefault()
