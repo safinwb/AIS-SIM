@@ -3,9 +3,11 @@ const fs = require('node:fs')
 const http = require('node:http')
 const path = require('node:path')
 const UdpTransport = require('./libs/udp')
+const TcpTransport = require('./libs/tcp')
 
 const HOST = '127.0.0.1'
 const udpTransport = new UdpTransport()
+const tcpTransport = new TcpTransport()
 
 const MIME_TYPES = {
   '.css': 'text/css; charset=utf-8',
@@ -124,6 +126,14 @@ function broadcastUdpError(error) {
 }
 
 function registerIpcHandlers() {
+  ipcMain.handle('tcp:get-status', () => tcpTransport.getState())
+  ipcMain.handle('tcp:start', (_event, config) => tcpTransport.start(config))
+  ipcMain.handle('tcp:stop', () => tcpTransport.stop())
+  ipcMain.handle('tcp:send-messages', (_event, messages) => {
+    if (!Array.isArray(messages)) throw new Error('Expected an array of AIS messages.')
+    return { sent: messages.reduce((count, message) => count + tcpTransport.send(message), 0) }
+  })
+
   ipcMain.handle('udp:get-status', () => {
     return udpTransport.getState()
   })
@@ -162,6 +172,13 @@ udpTransport.on('transport-error', (error) => {
   broadcastUdpError(error)
 })
 
+tcpTransport.on('status', (status) => {
+  for (const window of BrowserWindow.getAllWindows()) window.webContents.send('tcp:status', status)
+})
+tcpTransport.on('transport-error', (error) => {
+  for (const window of BrowserWindow.getAllWindows()) window.webContents.send('tcp:error', { message: error.message })
+})
+
 app.whenReady().then(() => {
   return startStaticServer().then(({ server, url }) => {
     Menu.setApplicationMenu(null)
@@ -169,6 +186,7 @@ app.whenReady().then(() => {
 
     app.on('before-quit', () => {
       void udpTransport.stop()
+      void tcpTransport.stop()
       server.close()
     })
 

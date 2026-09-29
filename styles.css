@@ -37,9 +37,10 @@ body {
   background: #000000;
 }
 
+.transport-switch,
 .udp-mode-switch {
   display: inline-grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 4px;
   margin: 0 0 8px;
   padding: 4px;
@@ -467,3 +468,18 @@ body {
     max-height: calc(100vh - 32px);
   }
 }
+
+.transport-button {
+  min-height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.transport-button.is-selected { background: rgba(255, 255, 255, 0.14); color: white; }
+.transport-button:disabled { cursor: not-allowed; opacity: 0.4; }
+.udp-mode-switch { grid-template-columns: repeat(2, minmax(0, 1fr)); }

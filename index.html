@@ -17,7 +17,12 @@
     <main class="app-shell">
       <section class="map-panel">
         <div class="udp-panel">
-          <div class="udp-mode-switch" role="group" aria-label="UDP mode">
+          <div class="transport-switch" role="group" aria-label="Transport">
+            <button class="transport-button is-selected" type="button" data-transport="udp">UDP</button>
+            <button class="transport-button" type="button" data-transport="tcp">TCP</button>
+            <button class="transport-button" type="button" data-transport="serial" disabled title="Serial coming soon">Serial</button>
+          </div>
+          <div class="udp-mode-switch" role="group" aria-label="Connection mode">
             <button id="udp-mode-client" class="udp-mode-button is-selected" type="button" data-mode="client">
               Client
             </button>

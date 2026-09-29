@@ -36,3 +36,20 @@ contextBridge.exposeInMainWorld('udpTransport', {
     }
   }
 })
+
+contextBridge.exposeInMainWorld('tcpTransport', {
+  getStatus: () => ipcRenderer.invoke('tcp:get-status'),
+  start: (config) => ipcRenderer.invoke('tcp:start', config),
+  stop: () => ipcRenderer.invoke('tcp:stop'),
+  sendMessages: (messages) => ipcRenderer.invoke('tcp:send-messages', messages),
+  onStatusChange(listener) {
+    const wrapped = (_event, status) => listener(status)
+    ipcRenderer.on('tcp:status', wrapped)
+    return () => ipcRenderer.removeListener('tcp:status', wrapped)
+  },
+  onError(listener) {
+    const wrapped = (_event, error) => listener(error)
+    ipcRenderer.on('tcp:error', wrapped)
+    return () => ipcRenderer.removeListener('tcp:error', wrapped)
+  }
+})

@@ -35,6 +35,7 @@ const udpIpInput = document.getElementById('udp-ip')
 const udpPortInput = document.getElementById('udp-port')
 const udpToggleButton = document.getElementById('udp-toggle')
 const udpModeButtons = Array.from(document.querySelectorAll('.udp-mode-button'))
+const transportButtons = Array.from(document.querySelectorAll('.transport-button'))
 
 if (
   !mapElement ||
@@ -72,7 +73,7 @@ if (typeof window.AisEncoder === 'undefined') {
   throw new Error('AIS encoder is not available in the renderer.')
 }
 
-if (!window.udpTransport) {
+if (!window.udpTransport || !window.tcpTransport) {
   throw new Error('UDP transport bridge is not available.')
 }
 
@@ -92,6 +93,11 @@ let currentUdpStatus = {
   port: null
 }
 let selectedUdpMode = 'client'
+let selectedTransport = 'udp'
+
+function activeTransport() {
+  return selectedTransport === 'tcp' ? window.tcpTransport : window.udpTransport
+}
 
 const map = window.L.map(mapElement, {
   zoomControl: false,
@@ -132,6 +138,9 @@ function setUdpInputsDisabled(isDisabled) {
   for (const button of udpModeButtons) {
     button.disabled = isDisabled
   }
+  for (const button of transportButtons) {
+    button.disabled = isDisabled || button.dataset.transport === 'serial'
+  }
 }
 
 function resetUdpValidationState() {
@@ -162,7 +171,7 @@ function updateUdpButtonState(status) {
   }
 
   if (isActive) {
-    udpToggleButton.title = `UDP ${status.mode || selectedUdpMode} active: ${status.host}:${status.port}`
+    udpToggleButton.title = `${selectedTransport.toUpperCase()} ${status.mode || selectedUdpMode} active: ${status.host}:${status.port}`
     return
   }
 
@@ -172,7 +181,7 @@ function updateUdpButtonState(status) {
     }
   }
 
-  udpToggleButton.title = 'Activate UDP connection'
+  udpToggleButton.title = `Activate ${selectedTransport.toUpperCase()} connection`
 }
 
 function setUdpMode(mode, { applyDefaults = false } = {}) {
@@ -506,7 +515,7 @@ async function transmitAisForVessel(vesselId, vessel) {
   const payload = sentences.map((sentence) => `${sentence}\r\n`)
 
   try {
-    const result = await window.udpTransport.sendMessages(payload)
+    const result = await activeTransport().sendMessages(payload)
 
     if (result.sent > 0) {
       lastAisTransmitAt.set(vesselId, Date.now())
@@ -587,6 +596,19 @@ function tickSimulation(deltaSeconds) {
   maybeTransmitAis(Date.now())
 }
 
+for (const button of transportButtons) {
+  button.addEventListener('click', () => {
+    if (button.disabled || selectedTransport === button.dataset.transport) return
+    selectedTransport = button.dataset.transport
+    for (const item of transportButtons) {
+      const selected = item === button
+      item.classList.toggle('is-selected', selected)
+      item.setAttribute('aria-pressed', String(selected))
+    }
+    updateUdpButtonState({ active: false, lastError: null })
+  })
+}
+
 for (const button of udpModeButtons) {
   button.addEventListener('click', () => {
     if (udpToggleButton.classList.contains('is-active')) {
@@ -602,7 +624,7 @@ udpToggleButton.addEventListener('click', async () => {
 
   try {
     if (udpToggleButton.classList.contains('is-active')) {
-      const status = await window.udpTransport.stop()
+      const status = await activeTransport().stop()
       updateUdpButtonState(status)
       return
     }
@@ -613,13 +635,13 @@ udpToggleButton.addEventListener('click', async () => {
       return
     }
 
-    const status = await window.udpTransport.start(config)
+    const status = await activeTransport().start(config)
     updateUdpButtonState(status)
   } catch (error) {
-    console.error('UDP connection error:', error)
+    console.error('Connection error:', error)
     updateUdpButtonState({
       active: false,
-      lastError: error.message || 'UDP connection failed.'
+      lastError: error.message || 'Connection failed.'
     })
   } finally {
     udpToggleButton.disabled = false
@@ -682,32 +704,18 @@ document.addEventListener('keydown', (event) => {
   }
 })
 
-window.udpTransport.onStatusChange((status) => {
-  if (status.mode) {
-    setUdpMode(status.mode)
-  }
-
-  updateUdpButtonState(status)
-})
-
-window.udpTransport.onError((error) => {
-  console.error('UDP transport error:', error)
-})
+for (const [name, bridge] of [['udp', window.udpTransport], ['tcp', window.tcpTransport]]) {
+  bridge.onStatusChange((status) => {
+    if (selectedTransport !== name) return
+    if (status.mode) setUdpMode(status.mode)
+    updateUdpButtonState(status)
+  })
+  bridge.onError((error) => console.error(`${name.toUpperCase()} transport error:`, error))
+}
 
 setUdpMode(selectedUdpMode, { applyDefaults: true })
-
-window.udpTransport.getStatus().then((status) => {
-  if (status.mode) {
-    setUdpMode(status.mode)
-  }
-
-  updateUdpButtonState(status)
-}).catch((error) => {
-  console.error('Failed to query UDP status:', error)
-  updateUdpButtonState({
-    active: false,
-    lastError: error.message || 'Failed to query UDP status.'
-  })
+activeTransport().getStatus().then(updateUdpButtonState).catch((error) => {
+  updateUdpButtonState({ active: false, lastError: error.message })
 })
 
 setInterval(() => {
