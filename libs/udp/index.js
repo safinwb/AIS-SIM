@@ -54,11 +54,7 @@ class UdpTransport extends EventEmitter {
       if (normalizedConfig.mode === 'server') {
         await this.bindSocket(socket, normalizedConfig.port, normalizedConfig.host)
       } else {
-        if (normalizedConfig.localPort !== null) {
-          await this.bindSocket(socket, normalizedConfig.localPort)
-        }
-
-        await this.connectSocket(socket, normalizedConfig.port, normalizedConfig.host)
+        await this.bindSocket(socket, normalizedConfig.localPort ?? 0)
       }
     } catch (error) {
       safeCloseSocket(socket)
@@ -116,7 +112,7 @@ class UdpTransport extends EventEmitter {
     const payload = Buffer.isBuffer(message) ? message : Buffer.from(String(message), 'utf8')
 
     if (this.state.mode === 'client') {
-      this.socket.send(payload)
+      this.socket.send(payload, this.state.port, this.state.host)
       return 1
     }
 
@@ -232,19 +228,6 @@ class UdpTransport extends EventEmitter {
       socket.once('error', reject)
       socket.once('listening', () => {
         socket.removeListener('error', reject)
-      })
-    })
-  }
-
-  connectSocket(socket, port, host) {
-    return new Promise((resolve, reject) => {
-      socket.connect(port, host, (error) => {
-        if (error) {
-          reject(error)
-          return
-        }
-
-        resolve()
       })
     })
   }

@@ -16,7 +16,34 @@
   <body>
     <main class="app-shell">
       <section class="map-panel">
+        <div class="ownship-panel" aria-label="Own ship controls">
+          <div class="ownship-panel-header">
+            <img src="./assets/icons/ownship.png" alt="">
+            <div>
+              <span>Own Ship</span>
+              <strong>Helm Control</strong>
+            </div>
+          </div>
+          <div class="ownship-fields">
+            <label class="vessel-form-field">
+              <span>Speed (kn)</span>
+              <input id="ownship-speed" type="number" min="0" max="30" step="0.1" value="0">
+            </label>
+            <label class="vessel-form-field">
+              <span>Heading to (°)</span>
+              <input id="ownship-target-heading" type="number" min="0" max="359.9" step="0.1" value="0">
+            </label>
+          </div>
+          <div class="ownship-readout">
+            <span>Current heading <strong id="ownship-current-heading">000.0°</strong></span>
+            <span id="ownship-position">LAT 25.521222 · LNG 56.379194</span>
+          </div>
+        </div>
         <div class="udp-panel">
+          <div class="message-switch" role="group" aria-label="Message format">
+            <button class="message-button is-selected" type="button" data-message-format="ais" aria-pressed="true">AIS</button>
+            <button class="message-button" type="button" data-message-format="ttm" aria-pressed="false">TTM</button>
+          </div>
           <div class="transport-switch" role="group" aria-label="Transport">
             <button class="transport-button is-selected" type="button" data-transport="udp">UDP</button>
             <button class="transport-button" type="button" data-transport="tcp">TCP</button>
@@ -29,6 +56,14 @@
             <button id="udp-mode-server" class="udp-mode-button" type="button" data-mode="server">
               Server
             </button>
+          </div>
+          <div class="gps-output-option">
+            <label for="gps-output-toggle">
+              <input id="gps-output-toggle" type="checkbox">
+              <span>Transmit GPS</span>
+            </label>
+            <button id="gps-rate-button" type="button" aria-label="GPS transmission rate: 10 Hz. Click to change.">10 Hz</button>
+            <small>same port</small>
           </div>
           <div class="udp-pill">
             <label class="udp-field">
@@ -105,7 +140,10 @@
     <script src="./node_modules/leaflet/dist/leaflet.js"></script>
     <script src="./libs/SmoothWheelZoom.js"></script>
     <script src="./libs/ais.js"></script>
+    <script src="./libs/ttm/index.js"></script>
+    <script src="./libs/gps/index.js"></script>
     <script src="./libs/vessel.js"></script>
+    <script src="./libs/ownship.js"></script>
     <script src="./renderer.js"></script>
   </body>
 </html>

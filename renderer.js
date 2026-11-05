@@ -1,6 +1,6 @@
 const INITIAL_VIEW = {
-  latitude: 25.2854,
-  longitude: 55.3126,
+  latitude: 25 + 31 / 60 + 16.4 / 3600,
+  longitude: 56 + 22 / 60 + 45.1 / 3600,
   zoom: 11
 }
 
@@ -15,7 +15,7 @@ const DEFAULT_UDP_SETTINGS = {
   }
 }
 
-const SIMULATION_STEP_MS = 250
+const SIMULATION_STEP_MS = 100
 const mapElement = document.getElementById('map')
 const contextMenuElement = document.getElementById('map-context-menu')
 const vesselModalElement = document.getElementById('vessel-modal')
@@ -31,11 +31,18 @@ const vesselSogInput = document.getElementById('vessel-sog')
 const vesselMessageRateInput = document.getElementById('vessel-message-rate')
 const vesselCogInput = document.getElementById('vessel-cog')
 const vesselHeadingInput = document.getElementById('vessel-heading')
+const ownshipSpeedInput = document.getElementById('ownship-speed')
+const ownshipTargetHeadingInput = document.getElementById('ownship-target-heading')
+const ownshipCurrentHeading = document.getElementById('ownship-current-heading')
+const ownshipPosition = document.getElementById('ownship-position')
 const udpIpInput = document.getElementById('udp-ip')
 const udpPortInput = document.getElementById('udp-port')
 const udpToggleButton = document.getElementById('udp-toggle')
 const udpModeButtons = Array.from(document.querySelectorAll('.udp-mode-button'))
 const transportButtons = Array.from(document.querySelectorAll('.transport-button'))
+const messageButtons = Array.from(document.querySelectorAll('.message-button'))
+const gpsOutputToggle = document.getElementById('gps-output-toggle')
+const gpsRateButton = document.getElementById('gps-rate-button')
 
 if (
   !mapElement ||
@@ -69,8 +76,20 @@ if (typeof window.Vessel === 'undefined') {
   throw new Error('Vessel model is not available in the renderer.')
 }
 
+if (typeof window.OwnShip === 'undefined' || !ownshipSpeedInput || !ownshipTargetHeadingInput || !ownshipCurrentHeading || !ownshipPosition) {
+  throw new Error('Own ship controls or model are not available in the renderer.')
+}
+
 if (typeof window.AisEncoder === 'undefined') {
   throw new Error('AIS encoder is not available in the renderer.')
+}
+
+if (!window.TtmEncoder || messageButtons.length !== 2) {
+  throw new Error('TTM encoder or message format controls are not available in the renderer.')
+}
+
+if (!window.GpsEncoder || !gpsOutputToggle || !gpsRateButton) {
+  throw new Error('GPS encoder or output control is not available in the renderer.')
 }
 
 if (!window.udpTransport || !window.tcpTransport) {
@@ -79,9 +98,16 @@ if (!window.udpTransport || !window.tcpTransport) {
 
 const vesselMarkers = new Map()
 const vessels = new Map()
+const ownship = new window.OwnShip()
 const draggingVesselIds = new Set()
-const lastAisTransmitAt = new Map()
-const pendingAisTransmitIds = new Set()
+let draggingOwnship = false
+const lastTransmitAt = new Map()
+const pendingTransmitIds = new Set()
+const ttmTargetNumbers = new Map()
+const ttmTargetIds = new Map()
+let pendingGpsTransmit = false
+let gpsRateHz = 10
+let gpsTicksUntilSend = 0
 
 let contextMenuState = null
 let currentUdpStatus = {
@@ -94,6 +120,7 @@ let currentUdpStatus = {
 }
 let selectedUdpMode = 'client'
 let selectedTransport = 'udp'
+let selectedMessageFormat = 'ais'
 
 function activeTransport() {
   return selectedTransport === 'tcp' ? window.tcpTransport : window.udpTransport
@@ -124,6 +151,58 @@ const vesselIcon = window.L.divIcon({
   iconAnchor: [18, 18],
   iconSize: [36, 36]
 })
+
+const ownshipIcon = window.L.divIcon({
+  className: 'ownship-marker-icon',
+  html: '<div class="ownship-marker-shell"><img src="./assets/icons/ownship.png" alt=""></div>',
+  iconAnchor: [29, 29],
+  iconSize: [58, 58]
+})
+
+const ownshipMarker = window.L.marker(ownship.getLatLng(), {
+  draggable: true,
+  icon: ownshipIcon,
+  zIndexOffset: 1000
+}).addTo(map)
+
+function updateOwnshipPositionText(latitude, longitude) {
+  ownshipPosition.textContent = `LAT ${latitude.toFixed(6)} · LNG ${longitude.toFixed(6)}`
+}
+
+function updateOwnshipDisplay() {
+  ownshipMarker.setLatLng(ownship.getLatLng())
+  updateMarkerHeading(ownshipMarker, ownship.heading)
+  ownshipCurrentHeading.textContent = `${ownship.heading.toFixed(1).padStart(5, '0')}°`
+  updateOwnshipPositionText(ownship.latitude, ownship.longitude)
+  if (ownshipMarker.isPopupOpen()) {
+    ownshipMarker.setPopupContent(formatOwnshipPopup())
+  }
+}
+
+function formatOwnshipPopup() {
+  return `<strong>Own Ship</strong><br>SOG ${ownship.sog.toFixed(1)} kn<br>HDG ${ownship.heading.toFixed(1)}°<br>${ownshipPosition.textContent}`
+}
+
+ownshipMarker.bindPopup(formatOwnshipPopup(), { offset: [0, -14] })
+ownshipMarker.on('click', hideContextMenu)
+ownshipMarker.on('dragstart', () => {
+  draggingOwnship = true
+  hideContextMenu()
+})
+ownshipMarker.on('drag', () => {
+  const position = ownshipMarker.getLatLng()
+  updateOwnshipPositionText(position.lat, position.lng)
+})
+ownshipMarker.on('dragend', () => {
+  const position = ownshipMarker.getLatLng()
+  ownship.applyUpdates({
+    latitude: position.lat,
+    longitude: ((position.lng + 180) % 360 + 360) % 360 - 180
+  })
+  draggingOwnship = false
+  updateOwnshipDisplay()
+})
+updateOwnshipDisplay()
 
 function applyUdpDefaults(mode) {
   const defaults = DEFAULT_UDP_SETTINGS[mode]
@@ -177,8 +256,9 @@ function updateUdpButtonState(status) {
 
   if (!isActive) {
     for (const vesselId of vessels.keys()) {
-      lastAisTransmitAt.set(vesselId, 0)
+      lastTransmitAt.set(vesselId, 0)
     }
+    gpsTicksUntilSend = 0
   }
 
   udpToggleButton.title = `Activate ${selectedTransport.toUpperCase()} connection`
@@ -320,7 +400,7 @@ function updateMarkerHeading(marker, heading) {
     return
   }
 
-  const shell = element.querySelector('.vessel-marker-shell')
+  const shell = element.querySelector('.vessel-marker-shell, .ownship-marker-shell')
   if (shell) {
     shell.style.setProperty('--vessel-heading', `${heading}deg`)
   }
@@ -340,7 +420,32 @@ function formatVesselPopup(vessel) {
   ].join('<br>')
 }
 
+function nextTtmTargetNumber() {
+  const used = new Set(ttmTargetNumbers.values())
+  for (let number = 1; number <= 999; number += 1) {
+    if (!used.has(number)) return number
+  }
+  return null
+}
+
+function nextTtmTargetId() {
+  const used = new Set(ttmTargetIds.values())
+  let number = Math.floor(Math.random() * 1000000)
+  for (let attempt = 0; attempt < 1000000; attempt += 1) {
+    const id = `T${String(number).padStart(6, '0')}`
+    if (!used.has(id)) return id
+    number = (number + 1) % 1000000
+  }
+  throw new Error('No TTM target IDs are available.')
+}
+
 function addRandomVessel(latlng) {
+  const targetNumber = nextTtmTargetNumber()
+  if (targetNumber === null) {
+    window.alert('The simulator supports up to 999 tracked targets.')
+    return
+  }
+
   const vessel = window.Vessel.createRandom({
     latitude: latlng.lat,
     longitude: latlng.lng
@@ -386,8 +491,10 @@ function addRandomVessel(latlng) {
   })
 
   vessels.set(vessel.id, vessel)
+  ttmTargetNumbers.set(vessel.id, targetNumber)
+  ttmTargetIds.set(vessel.id, nextTtmTargetId())
   vesselMarkers.set(vessel.id, marker)
-  lastAisTransmitAt.set(vessel.id, 0)
+  lastTransmitAt.set(vessel.id, 0)
   updateMarkerHeading(marker, vessel.heading)
 }
 
@@ -404,7 +511,9 @@ function removeVessel(vesselId) {
 
   vesselMarkers.delete(vesselId)
   vessels.delete(vesselId)
-  lastAisTransmitAt.delete(vesselId)
+  ttmTargetNumbers.delete(vesselId)
+  ttmTargetIds.delete(vesselId)
+  lastTransmitAt.delete(vesselId)
 }
 
 function normalizeAngle(value) {
@@ -506,26 +615,27 @@ function applyVesselUpdates(vesselId, updates) {
   updateMarkerHeading(marker, vessel.heading)
   marker.setPopupContent(formatVesselPopup(vessel))
   syncActiveVesselModal(vessel)
-  lastAisTransmitAt.set(vesselId, 0)
+  lastTransmitAt.set(vesselId, 0)
 }
 
-async function transmitAisForVessel(vesselId, vessel) {
-  pendingAisTransmitIds.add(vesselId)
-  const sentences = window.AisEncoder.encodePositionReport(vessel)
-  const payload = sentences.map((sentence) => `${sentence}\r\n`)
-
+async function transmitForVessel(vesselId, vessel) {
+  pendingTransmitIds.add(vesselId)
+  const format = selectedMessageFormat
   try {
+    const payload = format === 'ttm'
+      ? [window.TtmEncoder.encodeTtm(ownship, vessel, ttmTargetNumbers.get(vesselId), ttmTargetIds.get(vesselId))]
+      : window.AisEncoder.encodePositionReport(vessel).map((sentence) => `${sentence}\r\n`)
     const result = await activeTransport().sendMessages(payload)
 
-    if (result.sent > 0) {
-      lastAisTransmitAt.set(vesselId, Date.now())
+    if (result.sent > 0 && format === selectedMessageFormat) {
+      lastTransmitAt.set(vesselId, Date.now())
     }
   } finally {
-    pendingAisTransmitIds.delete(vesselId)
+    pendingTransmitIds.delete(vesselId)
   }
 }
 
-function shouldTransmitAis(vesselId, currentTimeMs) {
+function shouldTransmit(vesselId, currentTimeMs) {
   if (!currentUdpStatus.active) {
     return false
   }
@@ -534,11 +644,11 @@ function shouldTransmitAis(vesselId, currentTimeMs) {
     return false
   }
 
-  if (pendingAisTransmitIds.has(vesselId)) {
+  if (pendingTransmitIds.has(vesselId)) {
     return false
   }
 
-  const lastTransmitAt = lastAisTransmitAt.get(vesselId) || 0
+  const lastSentAt = lastTransmitAt.get(vesselId) || 0
   const vessel = vessels.get(vesselId)
 
   if (!vessel) {
@@ -550,21 +660,21 @@ function shouldTransmitAis(vesselId, currentTimeMs) {
     : 1
   const transmitIntervalMs = 1000 / rateHz
 
-  return currentTimeMs - lastTransmitAt >= transmitIntervalMs
+  return currentTimeMs - lastSentAt >= transmitIntervalMs
 }
 
-function maybeTransmitAis(currentTimeMs) {
+function maybeTransmit(currentTimeMs) {
   for (const [vesselId, vessel] of vessels.entries()) {
-    if (!shouldTransmitAis(vesselId, currentTimeMs)) {
+    if (!shouldTransmit(vesselId, currentTimeMs)) {
       continue
     }
 
-    transmitAisForVessel(vesselId, vessel).catch((error) => {
-      console.error(`AIS transmit failed for vessel ${vesselId}:`, error)
+    transmitForVessel(vesselId, vessel).catch((error) => {
+      console.error(`${selectedMessageFormat.toUpperCase()} transmit failed for vessel ${vesselId}:`, error)
       updateUdpButtonState({
         active: currentUdpStatus.active,
         host: currentUdpStatus.host,
-        lastError: error.message || 'AIS transmit failed.',
+        lastError: error.message || 'Message transmit failed.',
         mode: currentUdpStatus.mode,
         port: currentUdpStatus.port
       })
@@ -572,7 +682,48 @@ function maybeTransmitAis(currentTimeMs) {
   }
 }
 
+async function maybeTransmitGps() {
+  if (!gpsOutputToggle.checked || !currentUdpStatus.active) return
+  if (currentUdpStatus.mode === 'server' && (!currentUdpStatus.peerCount || currentUdpStatus.peerCount < 1)) return
+  if (gpsTicksUntilSend > 0) {
+    gpsTicksUntilSend -= 1
+    return
+  }
+  if (pendingGpsTransmit) return
+
+  pendingGpsTransmit = true
+  gpsTicksUntilSend = 10 / gpsRateHz - 1
+  try {
+    await activeTransport().sendMessages(window.GpsEncoder.encodeGps(ownship))
+  } catch (error) {
+    gpsTicksUntilSend = 0
+    console.error('GPS transmit failed:', error)
+    updateUdpButtonState({
+      active: currentUdpStatus.active,
+      lastError: error.message || 'GPS transmit failed.'
+    })
+  } finally {
+    pendingGpsTransmit = false
+  }
+}
+
+gpsOutputToggle.addEventListener('change', () => {
+  gpsTicksUntilSend = 0
+})
+
+gpsRateButton.addEventListener('click', () => {
+  gpsRateHz = gpsRateHz === 10 ? 1 : gpsRateHz === 1 ? 5 : 10
+  gpsRateButton.textContent = `${gpsRateHz} Hz`
+  gpsRateButton.setAttribute('aria-label', `GPS transmission rate: ${gpsRateHz} Hz. Click to change.`)
+  gpsTicksUntilSend = 0
+})
+
 function tickSimulation(deltaSeconds) {
+  if (!draggingOwnship) {
+    ownship.updatePosition(deltaSeconds)
+    updateOwnshipDisplay()
+  }
+
   for (const [vesselId, vessel] of vessels.entries()) {
     if (draggingVesselIds.has(vesselId)) {
       continue
@@ -593,7 +744,22 @@ function tickSimulation(deltaSeconds) {
     }
   }
 
-  maybeTransmitAis(Date.now())
+  maybeTransmit(Date.now())
+  void maybeTransmitGps()
+}
+
+for (const button of messageButtons) {
+  button.addEventListener('click', () => {
+    const format = button.dataset.messageFormat
+    if (format === selectedMessageFormat) return
+    selectedMessageFormat = format
+    for (const item of messageButtons) {
+      const selected = item === button
+      item.classList.toggle('is-selected', selected)
+      item.setAttribute('aria-pressed', String(selected))
+    }
+    for (const vesselId of vessels.keys()) lastTransmitAt.set(vesselId, 0)
+  })
 }
 
 for (const button of transportButtons) {
@@ -675,6 +841,26 @@ document.addEventListener('click', (event) => {
 
 vesselCancelButton.addEventListener('click', () => {
   closeVesselModal()
+})
+
+ownshipSpeedInput.addEventListener('change', () => {
+  const speed = Number(ownshipSpeedInput.value)
+  if (ownshipSpeedInput.value !== '' && Number.isFinite(speed) && speed >= 0 && speed <= 30) {
+    ownship.setSpeed(speed)
+    ownshipSpeedInput.value = speed.toFixed(1)
+  } else {
+    ownshipSpeedInput.value = ownship.sog.toFixed(1)
+  }
+})
+
+ownshipTargetHeadingInput.addEventListener('change', () => {
+  const heading = Number(ownshipTargetHeadingInput.value)
+  if (ownshipTargetHeadingInput.value !== '' && Number.isFinite(heading) && heading >= 0 && heading < 360) {
+    ownship.setTargetHeading(heading)
+    ownshipTargetHeadingInput.value = heading.toFixed(1)
+  } else {
+    ownshipTargetHeadingInput.value = ownship.targetHeading.toFixed(1)
+  }
 })
 
 syncPairedAngleInputs(vesselCogInput, vesselHeadingInput)

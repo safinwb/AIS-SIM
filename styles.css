@@ -37,6 +37,87 @@ body {
   background: #000000;
 }
 
+.ownship-panel {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 1100;
+  width: var(--overlay-panel-width);
+  padding: 16px;
+  border: 1px solid rgba(158, 201, 231, 0.14);
+  border-radius: 18px;
+  background: #000000;
+}
+
+.ownship-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.ownship-panel-header img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+
+.ownship-panel-header div {
+  display: grid;
+  gap: 2px;
+}
+
+.ownship-panel-header span {
+  color: #00a2ff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.ownship-panel-header strong {
+  font-size: 1rem;
+}
+
+.ownship-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.ownship-readout {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  color: rgba(229, 239, 247, 0.74);
+  font-size: 0.7rem;
+}
+
+.ownship-readout strong {
+  color: #ffffff;
+}
+
+.ownship-marker-icon {
+  background: transparent;
+  border: 0;
+}
+
+.ownship-marker-shell {
+  --vessel-heading: 0deg;
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  transform: rotate(var(--vessel-heading));
+}
+
+.ownship-marker-shell img {
+  width: 58px;
+  height: 58px;
+  object-fit: contain;
+}
+
+.message-switch,
 .transport-switch,
 .udp-mode-switch {
   display: inline-grid;
@@ -49,6 +130,7 @@ body {
   background: #000000;
 }
 
+.message-button,
 .udp-mode-button {
   min-width: 0;
   min-height: 28px;
@@ -64,10 +146,12 @@ body {
   transition: background-color 160ms ease, color 160ms ease;
 }
 
+.message-button:hover,
 .udp-mode-button:hover {
   color: rgba(255, 255, 255, 0.9);
 }
 
+.message-button.is-selected,
 .udp-mode-button.is-selected {
   background: rgba(255, 255, 255, 0.14);
   color: #ffffff;
@@ -88,6 +172,54 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 999px;
   background: #1a1a1a;
+}
+
+.gps-output-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  margin: 0 2px 8px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.gps-output-option label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.gps-output-option input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: #009945;
+  cursor: pointer;
+}
+
+.gps-output-option button {
+  padding: 3px 7px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: #1a1a1a;
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.gps-output-option button:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.gps-output-option small {
+  margin-left: auto;
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 0.68rem;
+  font-weight: 500;
 }
 
 .udp-field {
@@ -434,6 +566,12 @@ body {
 }
 
 @media (max-width: 900px) {
+  .ownship-panel {
+    top: 12px;
+    left: 12px;
+    width: min(320px, calc(100vw - 24px));
+  }
+
   .udp-panel {
     bottom: 12px;
     left: 12px;
@@ -455,6 +593,13 @@ body {
 
   #map {
     min-height: 100vh;
+  }
+}
+
+@media (max-height: 620px) {
+  .ownship-panel {
+    max-height: calc(100vh - 112px);
+    overflow-y: auto;
   }
 }
 
@@ -483,3 +628,8 @@ body {
 .transport-button.is-selected { background: rgba(255, 255, 255, 0.14); color: white; }
 .transport-button:disabled { cursor: not-allowed; opacity: 0.4; }
 .udp-mode-switch { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.message-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
+}

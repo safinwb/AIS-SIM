@@ -130,7 +130,7 @@ function registerIpcHandlers() {
   ipcMain.handle('tcp:start', (_event, config) => tcpTransport.start(config))
   ipcMain.handle('tcp:stop', () => tcpTransport.stop())
   ipcMain.handle('tcp:send-messages', (_event, messages) => {
-    if (!Array.isArray(messages)) throw new Error('Expected an array of AIS messages.')
+    if (!Array.isArray(messages)) throw new Error('Expected an array of NMEA messages.')
     return { sent: messages.reduce((count, message) => count + tcpTransport.send(message), 0) }
   })
 
